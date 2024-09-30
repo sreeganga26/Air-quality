@@ -1,0 +1,122 @@
+import pandas as pd
+
+data = pd.read_csv('air_quality_data.csv')
+
+# Display the first few rows
+print(data.head())
+
+# Display the summary of the dataset
+print(data.info())
+
+# Check for missing values
+print(data.isnull().sum())
+
+data = data.dropna()
+
+data['date'] = pd.to_datetime(data['date'], format='%Y-%m-%d')
+
+data = data.drop_duplicates()
+
+print(data.info())
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Set the style for the plots
+sns.set(style="whitegrid")
+
+# Plot PM2.5 levels over time
+plt.figure(figsize=(10, 6))
+plt.plot(data['date'], data['PM2.5'], label='PM2.5', color='r')
+plt.title('PM2.5 Levels Over Time')
+plt.xlabel('Date')
+plt.ylabel('PM2.5 (µg/m³)')
+plt.legend()
+plt.show()
+
+# Visualize pollutant levels (PM2.5, NO2, O3) over time
+plt.figure(figsize=(10, 6))
+plt.plot(data['date'], data['PM2.5'], label='PM2.5', color='r')
+plt.plot(data['date'], data['NO2'], label='NO2', color='g')
+plt.plot(data['date'], data['O3'], label='O3', color='b')
+plt.title('Air Pollutant Levels Over Time')
+plt.xlabel('Date')
+plt.ylabel('Pollutant Level (µg/m³)')
+plt.legend()
+plt.show()
+
+# Calculate the correlation matrix
+corr_matrix = data[['PM2.5', 'NO2', 'O3', 'SO2']].corr()
+
+# Plot the heatmap of correlations
+plt.figure(figsize=(8, 6))
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm')
+plt.title('Correlation Matrix of Pollutants')
+plt.show()
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+# Define the features (e.g., NO2, O3, SO2) and target variable (PM2.5)
+X = data[['NO2', 'O3', 'SO2']]  # Features
+y = data['PM2.5']  # Target variable
+
+# Split the data into training and testing sets (80% train, 20% test)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Scale the features (optional but recommended)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Initialize the model
+model = LinearRegression()
+
+# Train the model
+model.fit(X_train, y_train)
+
+# Make predictions on the test set
+y_pred = model.predict(X_test)
+
+# Calculate performance metrics
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f'Mean Squared Error: {mse}')
+print(f'R-Squared Score: {r2}')
+
+plt.figure(figsize=(10, 6))
+plt.scatter(y_test, y_pred, color='blue')
+plt.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=3)
+plt.title('Actual vs Predicted PM2.5 Levels')
+plt.xlabel('Actual PM2.5')
+plt.ylabel('Predicted PM2.5')
+plt.show()
+
+from statsmodels.tsa.arima.model import ARIMA
+
+# Prepare the time series data for PM2.5
+data.set_index('date', inplace=True)
+pm25_series = data['PM2.5']
+
+# Fit an ARIMA model (choose appropriate p, d, q values based on ACF/PACF plots)
+model = ARIMA(pm25_series, order=(5, 1, 2))
+model_fit = model.fit()
+
+# Make future predictions
+forecast = model_fit.forecast(steps=30)
+print(forecast)
+
+# Plot the forecast
+plt.figure(figsize=(10, 6))
+plt.plot(pm25_series.index, pm25_series, label='Observed PM2.5')
+plt.plot(pd.date_range(pm25_series.index[-1], periods=30, freq='D'), forecast, label='Forecasted PM2.5', color='r')
+plt.title('PM2.5 Forecast for Next 30 Days')
+plt.xlabel('Date')
+plt.ylabel('PM2.5 (µg/m³)')
+plt.legend()
+plt.show()
+
